@@ -43,6 +43,14 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="Yaml.Abstract, Version=1.0.0.0, Culture=neutral, PublicKeyToken=96dfc321948ee54c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>External\Yaml.Abstract.dll</HintPath>
+    </Reference>
+    <Reference Include="Yaml.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=96dfc321948ee54c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>External\Yaml.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
