@@ -7,5 +7,6 @@ namespace Yaml
 {
     public interface Node
     {
+        string Tag { get; set; }
     }
 }

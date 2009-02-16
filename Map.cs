@@ -7,5 +7,6 @@ namespace Yaml
 {
     public class Mapping : Dictionary<Node,Node>, Node
     {
+        public string Tag { get; set; }
     }
 }
