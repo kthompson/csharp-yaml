@@ -161,7 +161,7 @@ namespace Yaml
                         SkipToken();
                         return map;
                     default:
-                        throw new InvalidDataException("Unexpected token: " + this.Token.ToString());
+                        throw new SyntaxErrorException(string.Empty, "Unexpected token: " + this.Token.ToString(), this.TokenSpan, string.Empty);
                 }
             }
         }
@@ -288,7 +288,7 @@ namespace Yaml
             }
 
             if (throwOnInvalidToken)
-                throw new InvalidDataException(token.ToString() + " expected but not found.");
+                throw new SyntaxErrorException(string.Empty, token.ToString() + " expected but not found.", this.TokenSpan, string.Empty);
 
             return false;
         }
@@ -336,7 +336,7 @@ namespace Yaml
                         SkipToken();
                         return map;
                     default:
-                        throw new InvalidDataException("Unexpected token: " + this.Token.ToString());
+                        throw new SyntaxErrorException(string.Empty, "Unexpected token: " + this.Token.ToString(), this.TokenSpan, string.Empty);
                 }
             }
         }
