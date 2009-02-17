@@ -28,7 +28,9 @@ namespace Yaml
 
         private Token ReadNextToken()
         {
+#if DEBUG
             Console.WriteLine(new string(' ', this.Depth) + this.Token.ToString());
+#endif
             this.NextRawToken();
             return this.SkipIgnorable();
         }
@@ -45,8 +47,6 @@ namespace Yaml
                         return ReadAlias();
                     case Token.BlockMappingBegin:
                         return this.ReadBlockMapping();
-                    case Token.DocumentSeperator:
-                        return this.ReadDocument();
                     case Token.OpenBrace:
                         return this.ReadFlowMapping();
                     case Token.OpenBracket:
@@ -60,7 +60,7 @@ namespace Yaml
                     case Token.SingleQuote:
                         return this.ReadSingleQuotedScalar();
                     case Token.Literal:
-                        return this.ReadBlockScalar();
+                        return this.ReadLiteralScalar();
                     case Token.Folded:
                         return this.ReadFoldedScalar();
                     case Token.Tag:
@@ -73,9 +73,13 @@ namespace Yaml
                         this.ReadNextToken();
                         continue;
                     default:
+#if DEBUG
                         Console.WriteLine("NotImplemented: " + this.Token.ToString());
                         this.ReadNextToken();
                         continue;
+#else
+                        throw new NotImplementedException("Token not implemented: " + this.Token.ToString());
+#endif
                 }
             }
         }
@@ -89,14 +93,14 @@ namespace Yaml
             return node;
         }
 
-        private Node ReadBlockScalar()
+        private Node ReadLiteralScalar()
         {
-            return ReadScalar(Token.Literal, Token.Outdent, ReadFoldedContent);
+            return ReadScalar(Token.Literal, Token.Outdent, ReadBlockContent);
         }
 
         private Node ReadFoldedScalar()
         {
-            return ReadScalar(Token.Folded, Token.Outdent, ReadFoldedContent);
+            return ReadScalar(Token.Folded, Token.Outdent, ReadBlockContent);
         }
 
         private Node ReadAlias()
@@ -115,18 +119,34 @@ namespace Yaml
             return node;
         }
 
-        private Document ReadDocument()
+        private void Read()
         {
-            
             var document = new Document();
-            SkipToken(Token.Newline, false);
-            SkipToken(Token.DocumentSeperator, false);
-
-            while (this.Token != Token.PauseStream && this.Token != Token.EOS)
-                document.Add(this.ReadNode());
-
             _documents.Add(document);
-            return document;
+            while (true)
+            {
+                switch (this.Token)
+                {
+                    case Token.DocumentSeperator:
+                        SkipToken();
+                        if (document.Count == 0)
+                            continue;
+                        document = new Document();
+                        _documents.Add(document);
+                        continue;
+                    case Token.PauseStream:
+                    case Token.IndentSpaces:
+                    case Token.Comment:
+                    case Token.Newline:
+                        SkipToken();
+                        continue;
+                    case Token.EOS:
+                        return;
+                    default:
+                        document.Add(this.ReadNode());
+                        continue;
+                }
+            }
         }
 
         private Mapping ReadFlowMapping()
@@ -173,7 +193,7 @@ namespace Yaml
 
 
 
-        private string ReadBlockContent()
+        private string ReadFlowContent()
         {
             var literal = "";
             Token lastToken = this.Token;
@@ -181,14 +201,26 @@ namespace Yaml
             {
                 switch (this.Token)
                 {
+                    case Token.Newline:
+                        SkipToken();
+                        continue;
                     case Token.EmptyLine:
                         SkipToken();
+                        if (this.Token == Token.Newline)
+                        {
+                            literal += this.TokenText;
+                            SkipToken();
+                        }
                         continue;
                     case Token.Escape:
                     case Token.TextContent:
-                    case Token.Newline:
                         literal += this.TokenText;
                         SkipToken();
+                        if (SkipToken(Token.Newline, false))
+                        {
+                            if (this.Token == Token.TextContent || this.Token == Token.Escape)
+                                literal += " ";
+                        }
                         continue;
                     default:
                         break;
@@ -199,25 +231,80 @@ namespace Yaml
             return literal;
         }
 
-        private string ReadFoldedContent()
+        private string ReadBlockContent()
         {
-            SkipToken(Token.Newline);
-            return ReadBlockContent();
+            this.NextRawToken(); //Token.Newline
+
+            var literal = "";
+            Token lastToken = this.Token;
+            bool dontFoldLine = false;
+            while (true)
+            {
+                switch (this.Token)
+                {
+                    case Token.IndentSpaces:
+                        this.NextRawToken();
+                        dontFoldLine = true;
+                        continue;
+                    case Token.Newline:
+                        this.NextRawToken();
+                        dontFoldLine = false;
+                        continue;
+                    case Token.EmptyLine:
+                        this.NextRawToken();
+                        if (this.Token == Token.Newline)
+                        {
+                            literal += this.TokenText;
+                            this.NextRawToken();
+                        }
+                        continue;
+                    case Token.Escape:
+                    case Token.TextContent:
+                        literal += this.TokenText;
+                        this.NextRawToken();
+                        if (this.Token == Token.Newline)
+                        {
+                            //save the new line incase we are at a situation where we may need to fold.
+
+                            var newLine = this.TokenText;
+
+                            this.NextRawToken();
+
+                            //if we are folding add a space otherwise add the Newline
+                            switch (this.Token)
+                            {
+                                case Token.IndentSpaces:
+                                case Token.TextContent:
+                                case Token.Escape:
+                                    literal += dontFoldLine ? newLine : " ";
+                                    break;
+                            }
+                                
+                        }
+                        continue;
+                    default:
+                        break;
+                }
+                break;
+            }
+
+            return literal;
+            
         }
 
         private Scalar ReadSingleQuotedScalar()
         {
-            return ReadScalar(Token.SingleQuote, Token.SingleQuote, ReadBlockContent);
+            return ReadScalar(Token.SingleQuote, Token.SingleQuote, ReadFlowContent);
         }
 
         private Scalar ReadDoubleQuotedScalar()
         {
-            return ReadScalar(Token.DoubleQuote, Token.DoubleQuote, ReadBlockContent);
+            return ReadScalar(Token.DoubleQuote, Token.DoubleQuote, ReadFlowContent);
         }
 
         private Scalar ReadPlainScalar()
         {
-            return ReadScalar(Token.PlainScalar, Token.PlainEnd, ReadBlockContent);
+            return ReadScalar(Token.PlainScalar, Token.PlainEnd, ReadFlowContent);
         }
 
         private Scalar ReadScalar(Token start, Token end, Func<string> content)
@@ -341,22 +428,14 @@ namespace Yaml
             }
         }
 
-        public void TestRead()
-        {
-            while (true)
-            {
-                if (this.Token == Token.EOS) break;
-
-                this.ReadNode();
-            }
-        }
+        
 
         #region "static methods"
         public static YamlReader Load(string yaml)
         {
             var reader = new YamlReader();
             reader.SetSource(yaml);
-            reader.ReadDocument();
+            reader.Read();
             return reader;
         }
 

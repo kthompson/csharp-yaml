@@ -8,5 +8,17 @@ namespace Yaml
     public class Mapping : Dictionary<Node,Node>, Node
     {
         public string Tag { get; set; }
+
+        public Node this[string index]
+        {
+            get
+            {
+                var key = this.Where(item => item.Key.ToString() == index).Select(item => item.Key).First();
+                if (key == null)
+                    return null;
+
+                return this[key];
+            }
+        }
     }
 }

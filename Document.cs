@@ -7,6 +7,15 @@ namespace Yaml
 {
     public class Document : Sequence
     {
+        public Document()
+        {
+        }
+
+        public Document(Node first)
+        {
+            this.Add(first);
+        }
+
         public Node Root
         {
             get
