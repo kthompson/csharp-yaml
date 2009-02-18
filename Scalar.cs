@@ -13,7 +13,6 @@ namespace Yaml
         }
 
         public string Text { get; private set; }
-        public string Tag { get; set; }
         public override string ToString()
         {
             return this.Text;

@@ -65,6 +65,8 @@ namespace Yaml
                         return this.ReadFoldedScalar();
                     case Token.Tag:
                         return this.ReadTaggedNode();
+                    case Token.Outdent:
+                        return null;
                     case Token.EOS:
                         return null;
                     case Token.IndentSpaces:
@@ -74,6 +76,7 @@ namespace Yaml
                         continue;
                     default:
 #if DEBUG
+                        System.Diagnostics.Debugger.Break();
                         Console.WriteLine("NotImplemented: " + this.Token.ToString());
                         this.ReadNextToken();
                         continue;
@@ -86,11 +89,10 @@ namespace Yaml
 
         private Node ReadTaggedNode()
         {
-            var tag = this.TokenText.Substring(1);
+            var tag = new Tag(this.TokenText.Substring(1));
             SkipToken(Token.Tag);
-            var node = ReadNode();
-            node.Tag = tag;
-            return node;
+            tag.Value = ReadNode();
+            return tag;
         }
 
         private Node ReadLiteralScalar()

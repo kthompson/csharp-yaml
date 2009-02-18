@@ -12,11 +12,5 @@ namespace Yaml
         {
             this.Text = text;
         }
-
-        #region Node Members
-
-        public string Tag { get; set; }
-
-        #endregion
     }
 }
