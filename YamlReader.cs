@@ -136,6 +136,7 @@ namespace Yaml
                         document = new Document();
                         _documents.Add(document);
                         continue;
+                    case Token.Outdent:
                     case Token.PauseStream:
                     case Token.IndentSpaces:
                     case Token.Comment:
